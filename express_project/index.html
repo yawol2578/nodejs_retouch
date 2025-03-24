@@ -7,86 +7,145 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #1e1e1e;
-            color: white;
-            text-align: center;
+            background-color: #f4f4f4;
             margin: 0;
             padding: 0;
         }
 
         .container {
-            max-width: 600px;
-            margin: 20px auto;
+            width: 80%;
+            max-width: 900px;
+            margin: 50px auto;
+            background-color: white;
             padding: 20px;
-            background-color: #333;
-            border-radius: 10px;
-            box-shadow: 0px 0px 10px rgba(0, 255, 0, 0.3);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
 
         h1 {
-            color: #4caf50;
+            text-align: center;
+            color: #333;
         }
 
-        form {
+        #article-form {
             display: flex;
             flex-direction: column;
+            gap: 10px;
         }
 
-        input, textarea {
-            margin-bottom: 10px;
+        #title, #content {
             padding: 10px;
-            border-radius: 5px;
-            border: none;
+            border: 1px solid #ddd;
+            border-radius: 4px;
             font-size: 16px;
-            background-color: #fff;
-            color: #000;
-        }
-
-        textarea {
-            height: 80px;
         }
 
         button {
             padding: 10px;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        button:hover {
-            opacity: 0.8;
-        }
-
-        button[type="submit"] {
-            background-color: #4caf50;
+            background-color: #4CAF50;
             color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            background-color: #ddd;
+            cursor: not-allowed;
         }
 
         .article {
-            background-color: #444;
+            background-color: #fff;
             padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .article-content {
+            flex-grow: 1;
+        }
+
+        .article h3 {
+            margin: 0;
+            color: #333;
+        }
+
+        .article p {
             margin: 10px 0;
-            border-radius: 5px;
-            box-shadow: 0px 0px 5px rgba(255, 255, 255, 0.2);
+            color: #555;
         }
 
-        .article button {
-            margin: 5px;
-            padding: 5px;
+        .article-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .article-actions button {
             font-size: 14px;
-            border-radius: 3px;
+            cursor: pointer;
         }
 
-        .edit-btn {
-            background-color: #008CBA;
+        .article-actions .edit-btn {
+            background-color: #ffa500;
             color: white;
         }
 
-        .delete-btn {
-            background-color: #f44336;
+        .article-actions .delete-btn {
+            background-color: #e74c3c;
             color: white;
+        }
+
+        .comment-form {
+            margin-top: 15px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .comment {
+            margin-top: 10px;
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .comment-content {
+            font-size: 14px;
+            color: #444;
+        }
+
+        .comment-time {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .comment-edit-form {
+            display: none;
+            margin-top: 10px;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .comment-edit-form textarea {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .comment-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .comment-actions button {
+            font-size: 12px;
+            padding: 5px;
         }
     </style>
 </head>
@@ -115,12 +174,31 @@
                 const div = document.createElement("div");
                 div.classList.add("article");
                 div.innerHTML = `
-                    <h3>${article.title}</h3>
-                    <p>${article.content}</p>
-                    <button class="edit-btn" onclick="editArticle(${article.id})">수정</button>
-                    <button class="delete-btn" onclick="deleteArticle(${article.id})">삭제</button>
+                    <div class="article-content">
+                        <h3>${article.title}</h3>
+                        <p>${article.content}</p>
+                        <div id="comments-container-${article.id}">
+                            <h4>댓글:</h4>
+                            <div id="comments-${article.id}"></div>
+                            <button onclick="toggleCommentForm(${article.id})">댓글 작성</button>
+                            <div id="comment-form-${article.id}" class="comment-form" style="display: none;">
+                                <textarea id="comment-content-${article.id}" placeholder="댓글을 입력하세요" required></textarea>
+                                <button onclick="addComment(${article.id})">댓글 추가</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="article-actions">
+                        ${article.title.startsWith('[공지]') ? ` 
+                            <button class="edit-btn" disabled>수정</button>
+                            <button class="delete-btn" disabled>삭제</button>
+                        ` : `
+                            <button class="edit-btn" onclick="editArticle(${article.id})">수정</button>
+                            <button class="delete-btn" onclick="deleteArticle(${article.id})">삭제</button>
+                        `}
+                    </div>
                 `;
                 container.appendChild(div);
+                fetchComments(article.id); // 해당 글에 대한 댓글 불러오기
             });
         }
 
@@ -166,14 +244,121 @@
 
             const result = await res.json();
 
-            // 서버에서 받은 결과를 처리하여 alert을 띄움
             if (result.error) {
-                alert(result.error); // 삭제할 수 없는
+                alert(result.error);
             } else {
-                alert(result.message); // 삭제 성공한
+                alert(result.message);
             }
 
             fetchArticles();
+        }
+
+        // 댓글 추가
+        async function addComment(articleId) {
+            const content = document.getElementById(`comment-content-${articleId}`).value;
+            if (!content) return;
+
+            await fetch(`${API_URL}/${articleId}/comments`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ content })
+            });
+
+            document.getElementById(`comment-content-${articleId}`).value = "";
+            fetchComments(articleId);
+        }
+
+        // 날짜 변환 함수 (UTC → 한국 표준시)
+function formatDateToKST(utcDate) {
+    const date = new Date(utcDate);
+    return date.toLocaleString("ko-KR", { 
+        timeZone: "Asia/Seoul", 
+        year: "numeric", 
+        month: "2-digit", 
+        day: "2-digit", 
+        hour: "2-digit", 
+        minute: "2-digit"
+    });
+}
+
+// 댓글 목록 불러오기 (수정됨)
+async function fetchComments(articleId) {
+    const res = await fetch(`${API_URL}/${articleId}/comments`);
+    const comments = await res.json();
+    const container = document.getElementById(`comments-${articleId}`);
+    container.innerHTML = "";
+
+    comments.forEach(comment => {
+        const div = document.createElement("div");
+        div.classList.add("comment");
+
+        // 한국 표준시(KST) 변환 적용
+        const formattedDate = formatDateToKST(comment.created_at);
+
+        div.innerHTML = `
+            <div class="comment-content">
+                <p>${comment.content}</p>
+                <span class="comment-time">${formattedDate}</span>
+            </div>
+            <div class="comment-actions">
+                <button onclick="editComment(${articleId}, ${comment.id})">수정</button>
+                <button onclick="deleteComment(${articleId}, ${comment.id})">삭제</button>
+            </div>
+            <div id="comment-edit-form-${comment.id}" class="comment-edit-form">
+                <textarea id="comment-edit-content-${comment.id}" required></textarea>
+                <button onclick="updateComment(${articleId}, ${comment.id})">수정하기</button>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+        // 댓글 수정
+        function editComment(articleId, commentId) {
+            const commentEditForm = document.getElementById(`comment-edit-form-${commentId}`);
+            const commentText = document.getElementById(`comment-edit-content-${commentId}`);
+            commentEditForm.style.display = 'block';
+            commentText.value = document.querySelector(`#comments-${articleId} .comment p`).innerText;
+        }
+
+        // 댓글 수정 완료
+        async function updateComment(articleId, commentId) {
+            const newContent = document.getElementById(`comment-edit-content-${commentId}`).value;
+
+            if (!newContent) return;
+
+            await fetch(`${API_URL}/${articleId}/comments/${commentId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ content: newContent })
+            });
+
+            fetchComments(articleId);
+        }
+
+        // 댓글 삭제
+        async function deleteComment(articleId, commentId) {
+            if (!confirm("정말 삭제하시겠습니까?")) return;
+
+            const res = await fetch(`${API_URL}/${articleId}/comments/${commentId}`, {
+                method: "DELETE"
+            });
+
+            const result = await res.json();
+
+            if (result.error) {
+                alert(result.error);
+            } else {
+                alert(result.message);
+            }
+
+            fetchComments(articleId);
+        }
+
+        // 댓글 입력창 토글
+        function toggleCommentForm(articleId) {
+            const form = document.getElementById(`comment-form-${articleId}`);
+            form.style.display = (form.style.display === 'none' || form.style.display === '') ? 'block' : 'none';
         }
 
         // 페이지 로드 시 글 목록 가져오기
