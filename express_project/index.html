@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📝 게시판</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1e1e1e;
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #333;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 255, 0, 0.3);
+        }
+
+        h1 {
+            color: #4caf50;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+
+        input, textarea {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            border: none;
+            font-size: 16px;
+            background-color: #fff;
+            color: #000;
+        }
+
+        textarea {
+            height: 80px;
+        }
+
+        button {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            opacity: 0.8;
+        }
+
+        button[type="submit"] {
+            background-color: #4caf50;
+            color: white;
+        }
+
+        .article {
+            background-color: #444;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            box-shadow: 0px 0px 5px rgba(255, 255, 255, 0.2);
+        }
+
+        .article button {
+            margin: 5px;
+            padding: 5px;
+            font-size: 14px;
+            border-radius: 3px;
+        }
+
+        .edit-btn {
+            background-color: #008CBA;
+            color: white;
+        }
+
+        .delete-btn {
+            background-color: #f44336;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📝 게시판</h1>
+        <form id="article-form">
+            <input type="text" id="title" placeholder="제목" required>
+            <textarea id="content" placeholder="내용" required></textarea>
+            <button type="submit">추가하기</button>
+        </form>
+        <div id="articles-container"></div>
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:3000/articles";
+
+        // 글 목록 불러오기
+        async function fetchArticles() {
+            const res = await fetch(API_URL);
+            const articles = await res.json();
+            const container = document.getElementById("articles-container");
+            container.innerHTML = "";
+
+            articles.forEach(article => {
+                const div = document.createElement("div");
+                div.classList.add("article");
+                div.innerHTML = `
+                    <h3>${article.title}</h3>
+                    <p>${article.content}</p>
+                    <button class="edit-btn" onclick="editArticle(${article.id})">수정</button>
+                    <button class="delete-btn" onclick="deleteArticle(${article.id})">삭제</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // 글 추가
+        document.getElementById("article-form").addEventListener("submit", async function(event) {
+            event.preventDefault();
+            const title = document.getElementById("title").value;
+            const content = document.getElementById("content").value;
+
+            await fetch(API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title, content })
+            });
+
+            document.getElementById("title").value = "";
+            document.getElementById("content").value = "";
+            fetchArticles();
+        });
+
+        // 글 수정
+        async function editArticle(id) {
+            const newTitle = prompt("새 제목을 입력하세요:");
+            const newContent = prompt("새 내용을 입력하세요:");
+            if (!newTitle || !newContent) return;
+
+            await fetch(`${API_URL}/${id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title: newTitle, content: newContent })
+            });
+
+            fetchArticles();
+        }
+
+        // 글 삭제
+        async function deleteArticle(id) {
+            if (!confirm("정말 삭제하시겠습니까?")) return;
+
+            const res = await fetch(`${API_URL}/${id}`, {
+                method: "DELETE"
+            });
+
+            const result = await res.json();
+
+            // 서버에서 받은 결과를 처리하여 alert을 띄움
+            if (result.error) {
+                alert(result.error); // 삭제할 수 없는
+            } else {
+                alert(result.message); // 삭제 성공한
+            }
+
+            fetchArticles();
+        }
+
+        // 페이지 로드 시 글 목록 가져오기
+        fetchArticles();
+    </script>
+</body>
+</html>
