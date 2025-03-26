@@ -145,6 +145,137 @@
             color: #333;         /* 글씨 색상 */
             margin: 0;
         }
+
+        /* 작성자 정보 스타일 */
+        .author, .comment-author {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        .comment-author {
+            margin-top: 3px;
+            font-size: 12px;
+        }
+
+        .no-comments {
+            color: #666;
+            font-style: italic;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        
+        .comment {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 3px solid #007bff;
+        }
+        
+        .comment-date {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+        
+        .comments h4 {
+            margin: 20px 0 10px 0;
+            color: #333;
+        }
+
+        .article-info {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .date {
+            font-style: italic;
+        }
+
+        .button-group {
+            margin: 15px 0;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+        }
+
+        .comment {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 3px solid #007bff;
+        }
+
+        .comment p {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .comment-author {
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .comment-date {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .comments h4 {
+            margin: 20px 0 10px 0;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .no-comments {
+            color: #666;
+            font-style: italic;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+
+        /* 로그인/회원가입 폼 스타일 */
+        .login-form, .register-form {
+            max-width: 400px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .login-form input, .register-form input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        .login-form button, .register-form button {
+            width: 100%;
+            margin-top: 10px;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .login-form button:hover, .register-form button:hover {
+            background: #5a67d8;
+        }
     </style>
 </head>
 <body>
@@ -186,17 +317,91 @@
 </div>
 
 <script>
-const API_URL = 'http://15.164.12.223:3000';
+const API_URL = 'http://localhost:3000';
 let user = null;
 let articles = [];
+let socket = null;
+
+// Socket.IO 연결
+function connectSocket() {
+    socket = io(API_URL);
+
+    socket.on('connect', () => {
+        console.log('서버에 연결되었습니다.');
+    });
+
+    socket.on('disconnect', () => {
+        console.log('서버와 연결이 끊어졌습니다.');
+    });
+
+    // 새 게시글 이벤트
+    socket.on('newArticle', (article) => {
+        articles.push(article);
+        renderArticles();
+    });
+
+    // 게시글 수정 이벤트
+    socket.on('articleUpdated', (updatedArticle) => {
+        const index = articles.findIndex(a => a.id === updatedArticle.id);
+        if (index !== -1) {
+            articles[index] = { ...articles[index], ...updatedArticle };
+            renderArticles();
+        }
+    });
+
+    // 게시글 삭제 이벤트
+    socket.on('articleDeleted', (articleId) => {
+        articles = articles.filter(a => a.id !== articleId);
+        renderArticles();
+    });
+
+    // 새 댓글 이벤트
+    socket.on('newComment', (comment) => {
+        const articleDiv = document.querySelector(`#comments_${comment.article_id}`);
+        if (articleDiv) {
+            fetchComments(comment.article_id, articleDiv.parentElement);
+        }
+    });
+}
+
+// 로그아웃 함수
+function logout() {
+    if (socket) {
+        socket.disconnect();
+        socket = null;
+    }
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    user = null;
+    showLoginButtons();
+    document.getElementById('articleSection').style.display = 'none';
+}
 
 // 로그인 상태 체크
 function checkLoginStatus() {
     const token = localStorage.getItem('token');
     if (token) {
-        user = JSON.parse(localStorage.getItem('user'));
-        showWelcomeMessage();
-        fetchArticles();
+        // 토큰이 있더라도 서버에서 유효성 검증
+        fetch(`${API_URL}/profile`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('인증 실패');
+            }
+            return response.json();
+        })
+        .then(() => {
+            user = JSON.parse(localStorage.getItem('user'));
+            showWelcomeMessage();
+            fetchArticles();
+        })
+        .catch(error => {
+            console.error('인증 오류:', error);
+            logout(); // 토큰이 유효하지 않으면 로그아웃
+        });
     } else {
         showLoginButtons();
     }
@@ -208,6 +413,16 @@ function showLoginButtons() {
     document.getElementById('articleSection').style.display = 'none';
     document.getElementById('loginForm').style.display = 'none';
     document.getElementById('registerForm').style.display = 'none';
+}
+
+function showLoginForm() {
+    document.getElementById('loginForm').style.display = 'block';
+    document.getElementById('registerForm').style.display = 'none';
+}
+
+function showRegisterForm() {
+    document.getElementById('registerForm').style.display = 'block';
+    document.getElementById('loginForm').style.display = 'none';
 }
 
 function showWelcomeMessage() {
@@ -244,6 +459,7 @@ function login() {
             fetchArticles();
             document.getElementById('loginForm').style.display = 'none'; 
             clearLoginForm();
+            connectSocket(); // Socket.IO 연결
         } else {
             alert('로그인 실패');
             clearLoginForm();
@@ -300,7 +516,7 @@ function fetchArticles() {
     });
 }
 
-// 게시글 목록 렌더링 (삭제 버튼 추가됨)
+// 게시글 목록 렌더링
 function renderArticles() {
     const articleList = document.getElementById('articleList');
     articleList.innerHTML = '';
@@ -308,21 +524,46 @@ function renderArticles() {
     articles.forEach(article => {
         const articleDiv = document.createElement('div');
         articleDiv.classList.add('article');
+        
+        // 한국 시간으로 변환
+        let formattedDate = '작성일 없음';
+        if (article.created_at) {
+            const date = new Date(article.created_at);
+            if (!isNaN(date.getTime())) {
+                const koreanTime = new Date(date.getTime() + (9 * 60 * 60 * 1000));
+                formattedDate = koreanTime.toLocaleString('ko-KR', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                });
+            }
+        }
 
         articleDiv.innerHTML = `
             <h3>${article.title}</h3>
             <div class="content">${article.content}</div>
-            ${user ? `
-                <button onclick="editArticle(${article.id})">수정</button>
-                <button onclick="deleteArticle(${article.id})">삭제</button>
-                <button onclick="addComment(${article.id})">댓글 작성</button>
+            <div class="article-info">
+                <div class="author">작성자: ${article.username || '시스템'}</div>
+                <div class="date">작성일: ${formattedDate}</div>
+            </div>
+            ${user && user.id === article.user_id ? `
+                <div class="button-group">
+                    <button onclick="editArticle(${article.id})">수정</button>
+                    <button onclick="deleteArticle(${article.id})">삭제</button>
+                    <button onclick="addComment(${article.id})">댓글 작성</button>
+                </div>
+            ` : user ? `
+                <div class="button-group">
+                    <button onclick="addComment(${article.id})">댓글 작성</button>
+                </div>
             ` : ''}
             <div id="comments_${article.id}" class="comments"></div>
         `;
 
         articleList.appendChild(articleDiv);
-
-        // 댓글 불러오기
         fetchComments(article.id, articleDiv);
     });
 }
@@ -358,27 +599,37 @@ function addArticle() {
 }
 
 // 게시글 수정
-function editArticle(articleId) {
-    const newTitle = prompt('새로운 제목을 입력하세요').trim();
-    const newContent = prompt('새로운 내용을 입력하세요').trim();
+function editArticle(id) {
+    const article = articles.find(a => a.id === id);
+    if (!article) return;
 
-    if (!newTitle || !newContent) {
-        alert('제목과 내용을 입력하세요.');
-        return;
-    }
+    const title = prompt('제목을 입력하세요', article.title);
+    if (!title) return;
 
-    fetch(`${API_URL}/articles/${articleId}`, {
+    const content = prompt('내용을 입력하세요', article.content);
+    if (!content) return;
+
+    fetch(`${API_URL}/articles/${id}`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ title: newTitle, content: newContent })
+        body: JSON.stringify({ title, content })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('게시글 수정에 실패했습니다.');
+        }
+        return response.json();
+    })
     .then(data => {
-        alert('게시글 수정 성공');
-        fetchArticles();
+        // articles 배열에서 해당 게시글 업데이트
+        const index = articles.findIndex(a => a.id === id);
+        if (index !== -1) {
+            articles[index] = { ...articles[index], title, content };
+            renderArticles(); // 화면 업데이트
+        }
     })
     .catch(error => {
         alert('게시글 수정 실패: ' + error.message);
@@ -386,12 +637,10 @@ function editArticle(articleId) {
 }
 
 // 게시글 삭제
-function deleteArticle(articleId) {
-    if (!confirm('정말로 삭제하시겠습니까?')) {
-        return;
-    }
+function deleteArticle(id) {
+    if (!confirm('정말 삭제하시겠습니까?')) return;
 
-    fetch(`${API_URL}/articles/${articleId}`, {
+    fetch(`${API_URL}/articles/${id}`, {
         method: 'DELETE',
         headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -399,13 +648,14 @@ function deleteArticle(articleId) {
     })
     .then(response => {
         if (!response.ok) {
-            throw new Error('게시글 삭제 실패');
+            throw new Error('게시글 삭제에 실패했습니다.');
         }
         return response.json();
     })
     .then(() => {
-        alert('게시글 삭제 성공');
-        fetchArticles(); // UI 업데이트
+        // articles 배열에서 해당 게시글 제거
+        articles = articles.filter(a => a.id !== id);
+        renderArticles(); // 화면 업데이트
     })
     .catch(error => {
         alert('게시글 삭제 실패: ' + error.message);
@@ -414,28 +664,77 @@ function deleteArticle(articleId) {
 
 // 댓글 가져오기
 function fetchComments(articleId, articleDiv) {
-    fetch(`${API_URL}/articles/${articleId}/comments`)
+    fetch(`${API_URL}/articles/${articleId}/comments`, {
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+    })
     .then(response => response.json())
     .then(comments => {
         const commentsDiv = articleDiv.querySelector(`#comments_${articleId}`);
-        commentsDiv.innerHTML = '';
-        comments.forEach(comment => {
-            const commentDiv = document.createElement('div');
-            commentDiv.classList.add('comment');
-            commentDiv.innerHTML = `<p>${comment.content}</p>`;
-            commentsDiv.appendChild(commentDiv);
-        });
+        commentsDiv.innerHTML = '<h4>댓글</h4>';
+        if (comments.length === 0) {
+            commentsDiv.innerHTML += '<p class="no-comments">아직 댓글이 없습니다.</p>';
+        } else {
+            comments.forEach(comment => {
+                const commentDiv = document.createElement('div');
+                commentDiv.classList.add('comment');
+                
+                // 한국 시간으로 변환
+                let formattedDate = '작성일 없음';
+                if (comment.created_at) {
+                    const date = new Date(comment.created_at);
+                    if (!isNaN(date.getTime())) {
+                        const koreanTime = new Date(date.getTime() + (9 * 60 * 60 * 1000));
+                        formattedDate = koreanTime.toLocaleString('ko-KR', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false
+                        });
+                    }
+                }
+                
+                commentDiv.innerHTML = `
+                    <p>${comment.content}</p>
+                    <div class="comment-author">작성자: ${comment.username || '시스템'}</div>
+                    <div class="comment-date">${formattedDate}</div>
+                `;
+                commentsDiv.appendChild(commentDiv);
+            });
+        }
     })
     .catch(error => {
-        alert('댓글을 불러오지 못했습니다: ' + error.message);
+        console.error('댓글을 불러오지 못했습니다:', error);
     });
 }
 
 // 댓글 작성
 function addComment(articleId) {
-    const comment = prompt('댓글을 입력하세요').trim();
+    const commentForm = document.createElement('div');
+    commentForm.classList.add('comment-form');
+    commentForm.style.display = 'block';
+    commentForm.innerHTML = `
+        <textarea placeholder="댓글을 입력하세요" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"></textarea>
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button onclick="this.parentElement.parentElement.remove()">취소</button>
+            <button onclick="submitComment(${articleId}, this)">작성</button>
+        </div>
+    `;
 
-    if (!comment) {
+    const article = document.querySelector(`#comments_${articleId}`);
+    article.insertBefore(commentForm, article.firstChild);
+}
+
+// 댓글 제출
+function submitComment(articleId, button) {
+    const commentForm = button.parentElement.parentElement;
+    const textarea = commentForm.querySelector('textarea');
+    const content = textarea.value.trim();
+
+    if (!content) {
         alert('댓글을 입력하세요.');
         return;
     }
@@ -446,12 +745,18 @@ function addComment(articleId) {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ content: comment })
+        body: JSON.stringify({ content })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('댓글 작성에 실패했습니다.');
+        }
+        return response.json();
+    })
     .then(data => {
-        alert('댓글 작성 성공');
-        fetchArticles();
+        commentForm.remove();
+        // 해당 게시글의 댓글 목록을 새로 불러옴
+        fetchComments(articleId, document.querySelector(`#comments_${articleId}`));
     })
     .catch(error => {
         alert('댓글 작성 실패: ' + error.message);
@@ -470,9 +775,10 @@ function clearRegisterForm() {
     document.getElementById('registerPassword').value = '';
 }
 
-// 페이지 로드 시 로그인 상태 확인
-checkLoginStatus();
-
+// 페이지 로드 시 실행
+document.addEventListener('DOMContentLoaded', function() {
+    checkLoginStatus();
+});
 
 </script>
 </body>
