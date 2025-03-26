@@ -4,462 +4,476 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>게시판</title>
+    <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
     <style>
         /* 전체 컨테이너 스타일 */
-.container {
-    width: 60%;
-    margin: 30px auto;
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-}
+        .container {
+            width: 60%;
+            margin: 30px auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        }
 
-/* 헤더 디자인 */
-header {
-    text-align: center;
-    padding: 20px;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    border-radius: 10px 10px 0 0;
-}
+        /* 헤더 디자인 */
+        header {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 10px 10px 0 0;
+        }
 
-/* 게시글 작성 입력 폼 */
-#articleSection {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    margin-top: 20px;
-    padding: 20px;
-    background: #f9f9f9;
-    border-radius: 10px;
-    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.05);
-}
+        /* 게시글 작성 입력 폼 */
+        #articleSection {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 20px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.05);
+        }
 
-#newArticleTitle, #newArticleContent {
-    width: 100%;
-    padding: 12px;
-    font-size: 16px;
-    border: 2px solid #ddd;
-    border-radius: 6px;
-    background: white;
-    outline: none;
-    transition: 0.3s;
-}
+        #newArticleTitle, #newArticleContent {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            outline: none;
+            transition: 0.3s;
+        }
 
-#newArticleTitle:focus, #newArticleContent:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 5px rgba(102, 126, 234, 0.5);
-}
+        #newArticleTitle:focus, #newArticleContent:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.5);
+        }
 
-#newArticleContent {
-    height: 120px;
-    resize: vertical;
-}
+        #newArticleContent {
+            height: 120px;
+            resize: vertical;
+        }
 
-/* 게시글 목록 스타일 */
-.article {
-    margin-bottom: 20px;
-    padding: 20px;
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.05);
-    transition: box-shadow 0.2s ease-in-out;
-}
+        /* 게시글 목록 스타일 */
+        .article {
+            margin-bottom: 20px;
+            padding: 20px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.05);
+            transition: box-shadow 0.2s ease-in-out;
+        }
 
-.article:hover {
-    box-shadow: 4px 4px 15px rgba(0, 0, 0, 0.1);
-}
+        .article:hover {
+            box-shadow: 4px 4px 15px rgba(0, 0, 0, 0.1);
+        }
 
-.article h3 {
-    margin: 0;
-    font-size: 22px;
-    font-weight: bold;
-    color: #333;
-}
+        .article h3 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: bold;
+            color: #333;
+        }
 
-.article .content {
-    margin-top: 10px;
-    margin-bottom: 10px; /* 본문과 버튼 사이의 간격 10px */
-    font-size: 16px;
-    line-height: 1.5;
-    color: #555;
-}
+        .article .content {
+            margin-top: 10px;
+            margin-bottom: 10px; /* 본문과 버튼 사이의 간격 10px */
+            font-size: 16px;
+            line-height: 1.5;
+            color: #555;
+        }
 
-/* 버튼 디자인 */
-button {
-    padding: 10px 15px;
-    font-size: 14px;
-    font-weight: bold;
-    background: #667eea;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: 0.3s;
-}
+        /* 버튼 디자인 */
+        button {
+            padding: 10px 15px;
+            font-size: 14px;
+            font-weight: bold;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
 
-button:hover {
-    background: #5a67d8;
-    transform: translateY(-1px);
-}
+        button:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
 
-.button-group {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-}
+        .button-group {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
 
-/* 댓글 입력창 */
-.comment-form {
-    display: none;
-    margin-top: 10px;  /* 댓글 입력창과 버튼 사이에 여백 추가 */
-    padding: 10px;
-    background: #f4f4f9;
-    border-radius: 6px;
-}
+        /* 댓글 입력창 */
+        .comment-form {
+            display: none;
+            margin-top: 10px;  /* 댓글 입력창과 버튼 사이에 여백 추가 */
+            padding: 10px;
+            background: #f4f4f9;
+            border-radius: 6px;
+        }
 
-.comment-form textarea {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    resize: vertical;
-}
+        .comment-form textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            resize: vertical;
+        }
 
-/* 댓글 컨테이너 스타일 */
-.comment {
-    background: #f1f1f1;  /* 댓글 영역 배경 색상 (연한 회색) */
-    padding: 10px;
-    border-radius: 6px;
-    margin-top: 15px;
-    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.05);
-}
+        /* 댓글 컨테이너 스타일 */
+        .comment {
+            background: #f1f1f1;  /* 댓글 영역 배경 색상 (연한 회색) */
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 15px;
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.05);
+        }
 
-/* 댓글 내용의 폰트 스타일 */
-.comment p {
-    font-weight: bold;  /* 댓글 내용 볼드체 */
-    font-size: 16px;     /* 댓글 글씨 크기 */
-    color: #333;         /* 글씨 색상 */
-    margin: 0;
-}
+        /* 댓글 내용의 폰트 스타일 */
+        .comment p {
+            font-weight: bold;  /* 댓글 내용 볼드체 */
+            font-size: 16px;     /* 댓글 글씨 크기 */
+            color: #333;         /* 글씨 색상 */
+            margin: 0;
+        }
     </style>
 </head>
 <body>
 
-<div id="app" class="container">
+<div class="container">
     <header>
-        <div id="app" class="container">
-            <header>
-                <h1>게시판</h1>
-                <div id="authStatus">
-                    <button id="loginButton" onclick="showLoginForm()">로그인</button>
-                    <button id="registerButton" onclick="showRegisterForm()">회원가입</button>
-                </div>
-                <div id="welcomeMessage" style="display:none;">
-                    <p id="welcomeText">환영합니다, <span id="usernameDisplay"></span>님!</p>
-                    <button id="logoutButton" onclick="logout()">로그아웃</button>
-                </div>
-    </header>
-        
-            <!-- 로그인 폼 -->
-            <div id="loginForm" class="login-form" style="display:none;">
-                <input type="text" id="loginUsername" placeholder="아이디" />
-                <input type="password" id="loginPassword" placeholder="비밀번호" />
-                <button onclick="login()">로그인</button>
-            </div>
-        
-            <!-- 회원가입 폼 -->
-            <div id="registerForm" class="register-form" style="display:none;">
-                <input type="text" id="registerUsername" placeholder="아이디" />
-                <input type="password" id="registerPassword" placeholder="비밀번호" />
-                <button onclick="register()">회원가입</button>
-            </div>
-        
-            <!-- 게시글 목록 -->
-            <div id="articleSection" style="display:none;">
-                <div id="articleList"></div>
-                <input type="text" id="newArticleTitle" placeholder="제목" />
-                <textarea id="newArticleContent" placeholder="내용"></textarea>
-                <button onclick="addArticle()">게시글 작성</button>
-            </div>
+        <h1>게시판</h1>
+        <div id="authStatus">
+            <button id="loginButton" onclick="showLoginForm()">로그인</button>
+            <button id="registerButton" onclick="showRegisterForm()">회원가입</button>
         </div>
+        <div id="welcomeMessage" style="display:none;">
+            <p id="welcomeText">환영합니다, <span id="usernameDisplay"></span>님!</p>
+            <button id="logoutButton" onclick="logout()">로그아웃</button>
+        </div>
+    </header>
 
-        <script>
-            const API_URL = 'http://localhost:3000';
-            let user = null;
-            let articles = [];
-        
-            // 로그인 상태 체크
-            function checkLoginStatus() {
-                const token = localStorage.getItem('token');
-                if (token) {
-                    user = JSON.parse(localStorage.getItem('user'));
-                    showWelcomeMessage();
-                    fetchArticles();
-                } else {
-                    showLoginButtons();
-                }
-            }
-        
-            function showLoginButtons() {
-                document.getElementById('authStatus').style.display = 'block';
-                document.getElementById('welcomeMessage').style.display = 'none';
-                document.getElementById('articleSection').style.display = 'none';
-                document.getElementById('loginForm').style.display = 'none';
-                document.getElementById('registerForm').style.display = 'none';
-            }
-        
-            function showWelcomeMessage() {
-                document.getElementById('authStatus').style.display = 'none';
-                document.getElementById('welcomeMessage').style.display = 'block';
-                document.getElementById('usernameDisplay').innerText = user.username;
-                document.getElementById('articleSection').style.display = 'block';
-            }
-        
-            // 로그인
-            function login() {
-                const username = document.getElementById('loginUsername').value;
-                const password = document.getElementById('loginPassword').value;
-                fetch(`${API_URL}/login`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ username, password })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.token) {
-                        localStorage.setItem('token', data.token);
-                        localStorage.setItem('user', JSON.stringify(data.user));
-                        user = data.user;
-                        showWelcomeMessage();
-                        fetchArticles();
-                        document.getElementById('loginForm').style.display = 'none'; // 로그인 후 로그인 폼 숨기기
-                        clearLoginForm();  // 로그인 폼 초기화
-                    } else {
-                        alert('로그인 실패');
-                        clearLoginForm();  // 로그인 폼 초기화
-                    }
-                })
-                .catch(error => {
-                    alert('로그인 실패: ' + error.message);
-                    clearLoginForm();  // 로그인 폼 초기화
-                });
-            }
-        
-            // 회원가입
-            function register() {
-                const username = document.getElementById('registerUsername').value;
-                const password = document.getElementById('registerPassword').value;
-                fetch(`${API_URL}/register`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ username, password })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.message) {
-                        alert('회원가입 성공!');
-                        showLoginForm();  // 회원가입 후 로그인 폼으로 전환
-                        clearRegisterForm();  // 회원가입 폼 초기화
-                    } else {
-                        alert('회원가입 실패');
-                    }
-                })
-                .catch(error => {
-                    alert('회원가입 실패: ' + error.message);
-                });
-            }
-        
-            // 로그아웃
-            function logout() {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                user = null;
-                showLoginButtons();
-            }
-        
-            // 게시글 가져오기
-            function fetchArticles() {
-                fetch(`${API_URL}/articles`)
-                .then(response => response.json())
-                .then(data => {
-                    articles = data;
-                    renderArticles();
-                })
-                .catch(error => {
-                    alert('게시글을 불러오지 못했습니다: ' + error.message);
-                });
-            }
-        
-            function renderArticles() {
-                const articleList = document.getElementById('articleList');
-                articleList.innerHTML = '';
-                articles.forEach(article => {
-                    const articleDiv = document.createElement('div');
-                    articleDiv.classList.add('article');
-                    
-                    // 댓글 조회
-                    fetchComments(article.id, articleDiv);  // 댓글도 같이 불러오기
-                    
-                    articleDiv.innerHTML = `
-                        <h3>${article.title}</h3>
-                        <div class="content">${article.content}</div>
-                        ${user ? `
-                            <button onclick="editArticle(${article.id})">수정</button>
-                            <button onclick="deleteArticle(${article.id})">삭제</button>
-                            <button onclick="addComment(${article.id})">댓글 작성</button>
-                        ` : ''}
-                        <div id="comments_${article.id}" class="comments"></div>
-                    `;
-                    articleList.appendChild(articleDiv);
-                });
-            }
-        
-            // 댓글 조회
-            function fetchComments(articleId, articleDiv) {
-                fetch(`${API_URL}/articles/${articleId}/comments`)
-                .then(response => response.json())
-                .then(comments => {
-                    const commentsDiv = articleDiv.querySelector(`#comments_${articleId}`);
-                    commentsDiv.innerHTML = '';
-                    comments.forEach(comment => {
-                        const commentDiv = document.createElement('div');
-                        commentDiv.classList.add('comment');
-                        commentDiv.innerHTML = `<p>${comment.content}</p>`;
-                        commentsDiv.appendChild(commentDiv);
-                    });
-                })
-                .catch(error => {
-                    alert('댓글을 불러오지 못했습니다: ' + error.message);
-                });
-            }
-        
-            // 게시글 작성
-            function addArticle() {
-                const title = document.getElementById('newArticleTitle').value;
-                const content = document.getElementById('newArticleContent').value;
-                fetch(`${API_URL}/articles`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    },
-                    body: JSON.stringify({ title, content })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    articles.push(data);
-                    renderArticles();
-                    document.getElementById('newArticleTitle').value = ''; // 제목 초기화
-                    document.getElementById('newArticleContent').value = ''; // 내용 초기화
-                })
-                .catch(error => {
-                    alert('게시글 작성 실패: ' + error.message);
-                });
-            }
-        
-            // 게시글 수정
-            function editArticle(articleId) {
-                const newTitle = prompt('새로운 제목을 입력하세요');
-                const newContent = prompt('새로운 내용을 입력하세요');
-                fetch(`${API_URL}/articles/${articleId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    },
-                    body: JSON.stringify({ title: newTitle, content: newContent })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    alert('게시글 수정 성공');
-                    fetchArticles();
-                })
-                .catch(error => {
-                    alert('게시글 수정 실패: ' + error.message);
-                });
-            }
-        
-            // 게시글 삭제
-            function deleteArticle(articleId) {
-                if (confirm('정말 삭제하시겠습니까?')) {
-                    fetch(`${API_URL}/articles/${articleId}`, {
-                        method: 'DELETE',
-                        headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('token')}`
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        alert('게시글 삭제 성공');
-                        fetchArticles();
-                    })
-                    .catch(error => {
-                        alert('게시글 삭제 실패: ' + error.message);
-                    });
-                }
-            }
-        
-            // 댓글 작성
-            function addComment(articleId) {
-                const comment = prompt('댓글을 입력하세요');
-                if (comment) {
-                    fetch(`${API_URL}/articles/${articleId}/comments`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${localStorage.getItem('token')}`
-                        },
-                        body: JSON.stringify({ content: comment })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        alert('댓글 작성 성공');
-                        fetchArticles(); // 댓글 작성 후 다시 불러오기
-                    })
-                    .catch(error => {
-                        alert('댓글 작성 실패: ' + error.message);
-                    });
-                }
-            }
-        
-            // 로그인 폼 보여주기
-            function showLoginForm() {
-                document.getElementById('loginForm').style.display = 'block';
-                document.getElementById('registerForm').style.display = 'none';
-                clearLoginForm();  // 로그인 폼 초기화
-            }
-        
-            // 회원가입 폼 보여주기
-            function showRegisterForm() {
-                document.getElementById('loginForm').style.display = 'none';
-                document.getElementById('registerForm').style.display = 'block';
-                clearRegisterForm();  // 회원가입 폼 초기화
-            }
-        
-            // 로그인 폼 초기화
-            function clearLoginForm() {
-                document.getElementById('loginUsername').value = '';
-                document.getElementById('loginPassword').value = '';
-            }
-        
-            // 회원가입 폼 초기화
-            function clearRegisterForm() {
-                document.getElementById('registerUsername').value = '';
-                document.getElementById('registerPassword').value = '';
-            }
-        
-            // 페이지 로드 시 로그인 상태 확인
-            checkLoginStatus();
-        </script>
-        
-        
+    <!-- 로그인 폼 -->
+    <div id="loginForm" class="login-form" style="display:none;">
+        <input type="text" id="loginUsername" placeholder="아이디" />
+        <input type="password" id="loginPassword" placeholder="비밀번호" />
+        <button onclick="login()">로그인</button>
+    </div>
 
+    <!-- 회원가입 폼 -->
+    <div id="registerForm" class="register-form" style="display:none;">
+        <input type="text" id="registerUsername" placeholder="아이디" />
+        <input type="password" id="registerPassword" placeholder="비밀번호" />
+        <button onclick="register()">회원가입</button>
+    </div>
+
+    <!-- 게시글 목록 -->
+    <div id="articleSection" style="display:none;">
+        <div id="articleList"></div>
+        <input type="text" id="newArticleTitle" placeholder="제목" />
+        <textarea id="newArticleContent" placeholder="내용"></textarea>
+        <button onclick="addArticle()">게시글 작성</button>
+    </div>
+</div>
+
+<script>
+const API_URL = 'http://15.164.12.223:3000';
+let user = null;
+let articles = [];
+
+// 로그인 상태 체크
+function checkLoginStatus() {
+    const token = localStorage.getItem('token');
+    if (token) {
+        user = JSON.parse(localStorage.getItem('user'));
+        showWelcomeMessage();
+        fetchArticles();
+    } else {
+        showLoginButtons();
+    }
+}
+
+function showLoginButtons() {
+    document.getElementById('authStatus').style.display = 'block';
+    document.getElementById('welcomeMessage').style.display = 'none';
+    document.getElementById('articleSection').style.display = 'none';
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('registerForm').style.display = 'none';
+}
+
+function showWelcomeMessage() {
+    document.getElementById('authStatus').style.display = 'none';
+    document.getElementById('welcomeMessage').style.display = 'block';
+    document.getElementById('usernameDisplay').innerText = user.username;
+    document.getElementById('articleSection').style.display = 'block';
+}
+
+// 로그인
+function login() {
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value.trim();
+
+    if (!username || !password) {
+        alert('아이디와 비밀번호를 입력하세요.');
+        return;
+    }
+
+    fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username, password })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.token) {
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            user = data.user;
+            showWelcomeMessage();
+            fetchArticles();
+            document.getElementById('loginForm').style.display = 'none'; 
+            clearLoginForm();
+        } else {
+            alert('로그인 실패');
+            clearLoginForm();
+        }
+    })
+    .catch(error => {
+        alert('로그인 실패: ' + error.message);
+        clearLoginForm();
+    });
+}
+
+// 회원가입
+function register() {
+    const username = document.getElementById('registerUsername').value.trim();
+    const password = document.getElementById('registerPassword').value.trim();
+
+    if (!username || !password) {
+        alert('아이디와 비밀번호를 입력하세요.');
+        return;
+    }
+
+    fetch(`${API_URL}/register`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username, password })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            alert('회원가입 성공!');
+            showLoginForm();
+            clearRegisterForm();
+        } else {
+            alert('회원가입 실패');
+        }
+    })
+    .catch(error => {
+        alert('회원가입 실패: ' + error.message);
+    });
+}
+
+// 게시글 가져오기
+function fetchArticles() {
+    fetch(`${API_URL}/articles`)
+    .then(response => response.json())
+    .then(data => {
+        articles = data;
+        renderArticles(); // ✅ 게시글 목록 렌더링
+    })
+    .catch(error => {
+        alert('게시글을 불러오지 못했습니다: ' + error.message);
+    });
+}
+
+// 게시글 목록 렌더링 (삭제 버튼 추가됨)
+function renderArticles() {
+    const articleList = document.getElementById('articleList');
+    articleList.innerHTML = '';
+
+    articles.forEach(article => {
+        const articleDiv = document.createElement('div');
+        articleDiv.classList.add('article');
+
+        articleDiv.innerHTML = `
+            <h3>${article.title}</h3>
+            <div class="content">${article.content}</div>
+            ${user ? `
+                <button onclick="editArticle(${article.id})">수정</button>
+                <button onclick="deleteArticle(${article.id})">삭제</button>
+                <button onclick="addComment(${article.id})">댓글 작성</button>
+            ` : ''}
+            <div id="comments_${article.id}" class="comments"></div>
+        `;
+
+        articleList.appendChild(articleDiv);
+
+        // 댓글 불러오기
+        fetchComments(article.id, articleDiv);
+    });
+}
+
+// 게시글 작성
+function addArticle() {
+    const title = document.getElementById('newArticleTitle').value.trim();
+    const content = document.getElementById('newArticleContent').value.trim();
+
+    if (!title || !content) {
+        alert('제목과 내용을 입력하세요.');
+        return;
+    }
+
+    fetch(`${API_URL}/articles`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ title, content })
+    })
+    .then(response => response.json())
+    .then(data => {
+        articles.push(data);
+        renderArticles();
+        document.getElementById('newArticleTitle').value = '';
+        document.getElementById('newArticleContent').value = '';
+    })
+    .catch(error => {
+        alert('게시글 작성 실패: ' + error.message);
+    });
+}
+
+// 게시글 수정
+function editArticle(articleId) {
+    const newTitle = prompt('새로운 제목을 입력하세요').trim();
+    const newContent = prompt('새로운 내용을 입력하세요').trim();
+
+    if (!newTitle || !newContent) {
+        alert('제목과 내용을 입력하세요.');
+        return;
+    }
+
+    fetch(`${API_URL}/articles/${articleId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ title: newTitle, content: newContent })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert('게시글 수정 성공');
+        fetchArticles();
+    })
+    .catch(error => {
+        alert('게시글 수정 실패: ' + error.message);
+    });
+}
+
+// 게시글 삭제
+function deleteArticle(articleId) {
+    if (!confirm('정말로 삭제하시겠습니까?')) {
+        return;
+    }
+
+    fetch(`${API_URL}/articles/${articleId}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('게시글 삭제 실패');
+        }
+        return response.json();
+    })
+    .then(() => {
+        alert('게시글 삭제 성공');
+        fetchArticles(); // UI 업데이트
+    })
+    .catch(error => {
+        alert('게시글 삭제 실패: ' + error.message);
+    });
+}
+
+// 댓글 가져오기
+function fetchComments(articleId, articleDiv) {
+    fetch(`${API_URL}/articles/${articleId}/comments`)
+    .then(response => response.json())
+    .then(comments => {
+        const commentsDiv = articleDiv.querySelector(`#comments_${articleId}`);
+        commentsDiv.innerHTML = '';
+        comments.forEach(comment => {
+            const commentDiv = document.createElement('div');
+            commentDiv.classList.add('comment');
+            commentDiv.innerHTML = `<p>${comment.content}</p>`;
+            commentsDiv.appendChild(commentDiv);
+        });
+    })
+    .catch(error => {
+        alert('댓글을 불러오지 못했습니다: ' + error.message);
+    });
+}
+
+// 댓글 작성
+function addComment(articleId) {
+    const comment = prompt('댓글을 입력하세요').trim();
+
+    if (!comment) {
+        alert('댓글을 입력하세요.');
+        return;
+    }
+
+    fetch(`${API_URL}/articles/${articleId}/comments`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ content: comment })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert('댓글 작성 성공');
+        fetchArticles();
+    })
+    .catch(error => {
+        alert('댓글 작성 실패: ' + error.message);
+    });
+}
+
+// 로그인 폼 초기화
+function clearLoginForm() {
+    document.getElementById('loginUsername').value = '';
+    document.getElementById('loginPassword').value = '';
+}
+
+// 회원가입 폼 초기화
+function clearRegisterForm() {
+    document.getElementById('registerUsername').value = '';
+    document.getElementById('registerPassword').value = '';
+}
+
+// 페이지 로드 시 로그인 상태 확인
+checkLoginStatus();
+
+
+</script>
 </body>
 </html>

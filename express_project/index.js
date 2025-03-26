@@ -159,6 +159,10 @@ app.get('/articles', (req, res) => {
 app.post('/articles', (req, res) => {
   const { title, content } = req.body;
 
+  if (!title || !content) {
+    return res.status(400).json({ error: "제목과 내용을 입력하세요." });
+  }
+
   db.run(`INSERT INTO articles (title, content) VALUES (?, ?)`, [title, content], function(err) {
     if (err) {
       return res.status(500).json({ error: err.message });
@@ -171,6 +175,10 @@ app.post('/articles', (req, res) => {
 app.put('/articles/:id', (req, res) => {
   const id = req.params.id;
   const { title, content } = req.body;
+
+  if (!title || !content) {
+    return res.status(400).json({ error: "제목과 내용을 입력하세요." });
+  }
 
   db.run(`UPDATE articles SET title = ?, content = ? WHERE id = ?`, [title, content, id], function(err) {
     if (err) {
@@ -208,17 +216,16 @@ app.post('/articles/:id/comments', (req, res) => {
   }
 
   db.run(
-    `INSERT INTO comments (article_id, content) VALUES (?, ?)`,  // user_id 삭제
+    `INSERT INTO comments (article_id, content) VALUES (?, ?)`,
     [articleId, content],
     function (err) {
       if (err) {
         return res.status(500).json({ error: err.message });
       }
-      res.json({ id: this.lastID, article_id: articleId, content });  // 내용만 반환
+      res.json({ id: this.lastID, article_id: articleId, content });
     }
   );
 });
-
 
 
 
