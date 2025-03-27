@@ -276,6 +276,39 @@
         .login-form button:hover, .register-form button:hover {
             background: #5a67d8;
         }
+
+        .like-section {
+            display: inline-block;
+            margin-left: 10px;
+        }
+        .like-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px 10px;
+            font-size: 14px;
+            color: #666;
+            transition: all 0.3s ease;
+        }
+        .like-btn.liked {
+            color: #ff4757;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .like-btn:not(.liked):hover {
+            color: #ff4757;
+        }
+        .like-btn.liked:hover {
+            cursor: not-allowed;
+        }
+        .comment-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 5px;
+            font-size: 12px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -360,6 +393,49 @@ function connectSocket() {
         const articleDiv = document.querySelector(`#comments_${comment.article_id}`);
         if (articleDiv) {
             fetchComments(comment.article_id, articleDiv.parentElement);
+        }
+    });
+
+    // 좋아요 이벤트
+    socket.on('likeToggled', (data) => {
+        if (data.article_id) {
+            const article = articles.find(a => a.id === data.article_id);
+            if (article) {
+                article.liked = data.liked;
+                const likeBtn = document.querySelector(`.article[data-id="${data.article_id}"] .like-btn`);
+                if (likeBtn) {
+                    likeBtn.classList.toggle('liked', data.liked);
+                }
+            }
+        } else if (data.comment_id) {
+            const commentDiv = document.querySelector(`#comments_${data.comment_id}`);
+            if (commentDiv) {
+                const likeBtn = commentDiv.querySelector('.like-btn');
+                if (likeBtn) {
+                    likeBtn.classList.toggle('liked', data.liked);
+                }
+            }
+        }
+    });
+
+    socket.on('likeCountUpdated', (data) => {
+        if (data.article_id) {
+            const article = articles.find(a => a.id === data.article_id);
+            if (article) {
+                article.like_count = data.count;
+                const likeBtn = document.querySelector(`.article[data-id="${data.article_id}"] .like-btn`);
+                if (likeBtn) {
+                    likeBtn.textContent = `❤️ ${data.count}`;
+                }
+            }
+        } else if (data.comment_id) {
+            const commentDiv = document.querySelector(`#comments_${data.comment_id}`);
+            if (commentDiv) {
+                const likeBtn = commentDiv.querySelector('.like-btn');
+                if (likeBtn) {
+                    likeBtn.textContent = `❤️ ${data.count}`;
+                }
+            }
         }
     });
 }
@@ -524,23 +600,18 @@ function renderArticles() {
     articles.forEach(article => {
         const articleDiv = document.createElement('div');
         articleDiv.classList.add('article');
+        articleDiv.setAttribute('data-id', article.id);
         
         // 한국 시간으로 변환
-        let formattedDate = '작성일 없음';
-        if (article.created_at) {
-            const date = new Date(article.created_at);
-            if (!isNaN(date.getTime())) {
-                const koreanTime = new Date(date.getTime() + (9 * 60 * 60 * 1000));
-                formattedDate = koreanTime.toLocaleString('ko-KR', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                });
-            }
-        }
+        const date = new Date(article.created_at);
+        const formattedDate = date.toLocaleString('ko-KR', {
+            timeZone: 'Asia/Seoul',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
 
         articleDiv.innerHTML = `
             <h3>${article.title}</h3>
@@ -548,6 +619,13 @@ function renderArticles() {
             <div class="article-info">
                 <div class="author">작성자: ${article.username || '시스템'}</div>
                 <div class="date">작성일: ${formattedDate}</div>
+                <div class="like-section">
+                    <button class="like-btn ${article.liked ? 'liked' : ''}" 
+                            onclick="toggleLike(${article.id}, null)"
+                            ${article.liked ? 'disabled' : ''}>
+                        ❤️ ${article.like_count || 0}
+                    </button>
+                </div>
             </div>
             ${user && user.id === article.user_id ? `
                 <div class="button-group">
@@ -679,28 +757,32 @@ function fetchComments(articleId, articleDiv) {
             comments.forEach(comment => {
                 const commentDiv = document.createElement('div');
                 commentDiv.classList.add('comment');
+                commentDiv.id = `comment_${comment.id}`;
                 
                 // 한국 시간으로 변환
-                let formattedDate = '작성일 없음';
-                if (comment.created_at) {
-                    const date = new Date(comment.created_at);
-                    if (!isNaN(date.getTime())) {
-                        const koreanTime = new Date(date.getTime() + (9 * 60 * 60 * 1000));
-                        formattedDate = koreanTime.toLocaleString('ko-KR', {
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            hour12: false
-                        });
-                    }
-                }
+                const date = new Date(comment.created_at);
+                const formattedDate = date.toLocaleString('ko-KR', {
+                    timeZone: 'Asia/Seoul',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
                 
                 commentDiv.innerHTML = `
-                    <p>${comment.content}</p>
-                    <div class="comment-author">작성자: ${comment.username || '시스템'}</div>
-                    <div class="comment-date">${formattedDate}</div>
+                    <div class="comment-content">${comment.content}</div>
+                    <div class="comment-info">
+                        <div class="author">작성자: ${comment.username || '시스템'}</div>
+                        <div class="date">작성일: ${formattedDate}</div>
+                        <div class="like-section">
+                            <button class="like-btn ${comment.liked ? 'liked' : ''}" 
+                                    onclick="toggleLike(null, ${comment.id})"
+                                    ${comment.liked ? 'disabled' : ''}>
+                                ❤️ ${comment.like_count || 0}
+                            </button>
+                        </div>
+                    </div>
                 `;
                 commentsDiv.appendChild(commentDiv);
             });
@@ -773,6 +855,48 @@ function clearLoginForm() {
 function clearRegisterForm() {
     document.getElementById('registerUsername').value = '';
     document.getElementById('registerPassword').value = '';
+}
+
+// 좋아요 토글
+function toggleLike(articleId, commentId) {
+    if (!user) {
+        alert('좋아요를 누르려면 로그인이 필요합니다.');
+        return;
+    }
+
+    const button = event.currentTarget;
+    if (button.disabled) return; // 이미 좋아요를 누른 경우
+
+    fetch(`${API_URL}/likes/toggle`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ article_id: articleId, comment_id: commentId })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || '좋아요 처리에 실패했습니다.');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (articleId) {
+            const article = articles.find(a => a.id === articleId);
+            if (article) {
+                article.liked = data.liked;
+                button.classList.toggle('liked', data.liked);
+                button.disabled = data.liked;
+            }
+        }
+    })
+    .catch(error => {
+        console.error('좋아요 처리 실패:', error);
+        alert(error.message);
+    });
 }
 
 // 페이지 로드 시 실행
